@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Agent-Class: com.yaowan.reload.core.Reloader
+Premain-Class: com.yaowan.reload.core.Reloader
+Can-Redefine-Classes: true
