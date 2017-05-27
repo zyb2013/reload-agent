@@ -4,16 +4,17 @@ import java.io.File;
 import java.util.EventObject;
 
 /**
- * 事件
+ * class文件事件
  * 
  * @author Alias
  *
+ * @date 2017年5月27日 下午3:13:04
  */
-public class FileEvent extends EventObject {
+public class ClassFileEvent extends EventObject {
 
 	private static final long serialVersionUID = 4696923746078504205L;
 
-	public FileEvent(String path, String basePath) {
+	public ClassFileEvent(String path, String basePath) {
 		super(path.replace(basePath + File.separator, ""));
 	}
 

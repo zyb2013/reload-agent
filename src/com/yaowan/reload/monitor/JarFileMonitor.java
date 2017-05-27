@@ -17,24 +17,22 @@ import java.util.logging.Logger;
  * @author Alias
  *
  */
-public class JarMonitor implements FileModifiedListener, FileAddedListener, FileDeletedListener, Runnable {
+public class JarFileMonitor extends FileAlterationListenerAdaptor implements Runnable {
 
-	private final static Logger log = Logger.getLogger(JarMonitor.class.getName());
+	private final static Logger log = Logger.getLogger(JarFileMonitor.class.getName());
 
-	private final FileMonitor fileMonitor;
+	private final FileAlterationMonitor fileMonitor;
 	private final String absoluteFolderPath;
 	private final Map<String, Map<String, Long>> jarsMap;
-	private final List<JarModifiedListener> jarModifiedListeners;
+	private final List<FileAlterationListener> jarModifiedListeners;
 
-	public JarMonitor(String absoluteFolderPath) {
+	public JarFileMonitor(String absoluteFolderPath) {
 		this.absoluteFolderPath = absoluteFolderPath;
 		this.jarsMap = new HashMap<String, Map<String, Long>>();
-		this.jarModifiedListeners = new LinkedList<JarModifiedListener>();
+		this.jarModifiedListeners = new LinkedList<>();
 
-		fileMonitor = new FileMonitor(absoluteFolderPath, "jar");
-		fileMonitor.addModifiedListener(this);
-		fileMonitor.addAddedListener(this);
-		fileMonitor.addDeletedListener(this);
+		fileMonitor = new FileAlterationMonitor(absoluteFolderPath, "jar");
+		fileMonitor.addListener(this);
 	}
 
 	@Override
@@ -43,7 +41,7 @@ public class JarMonitor implements FileModifiedListener, FileAddedListener, File
 	}
 
 	@Override
-	public void fileModified(FileEvent event) {
+	public void onAlteration(ClassFileEvent event) {
 		JarFile file = getJarFile(event);
 		if (file != null) {
 			Map<String, Long> jarEntries = jarsMap.get(event.getSource());
@@ -57,16 +55,14 @@ public class JarMonitor implements FileModifiedListener, FileAddedListener, File
 				}
 				if (entry.getTime() != jarEntries.get(entry.getName()).longValue()) {
 					jarEntries.put(entry.getName(), Long.valueOf(entry.getTime()));
-					notifyJarModifiedListeners(new JarEvent(file, entry.getName()));
+					doAlteration(new JarFileEvent(file, entry.getName()));
 				}
-
 			}
-
 		}
 	}
 
 	@Override
-	public void fileAdded(FileEvent event) {
+	public void onAdd(ClassFileEvent event) {
 		JarFile file = getJarFile(event);
 
 		if (file != null) {
@@ -77,28 +73,28 @@ public class JarMonitor implements FileModifiedListener, FileAddedListener, File
 				JarEntry entry = entries.nextElement();
 				if (entry.getName().endsWith("jar")) {
 					jarEntries.put(entry.getName(), Long.valueOf(entry.getTime()));
-					notifyJarModifiedListeners(new JarEvent(file, entry.getName()));
+					doAlteration(new JarFileEvent(file, entry.getName()));
 				}
 			}
 		}
 	}
 
 	@Override
-	public void fileDeleted(FileEvent event) {
+	public void onDelete(ClassFileEvent event) {
 		jarsMap.remove(event.getSource());
 	}
 
-	public void addJarModifiedListener(JarModifiedListener listener) {
+	public void addListener(FileAlterationListener listener) {
 		jarModifiedListeners.add(listener);
 	}
 
-	private void notifyJarModifiedListeners(JarEvent event) {
-		for (JarModifiedListener listener : jarModifiedListeners) {
-			listener.jarModified(event);
+	private void doAlteration(JarFileEvent event) {
+		for (FileAlterationListener listener : jarModifiedListeners) {
+			listener.onJarAlteration(event);
 		}
 	}
 
-	private JarFile getJarFile(FileEvent event) {
+	private JarFile getJarFile(ClassFileEvent event) {
 		try {
 			return new JarFile(absoluteFolderPath + event.getSource());
 		} catch (IOException e) {
