@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 /**
  * 监视文件的修改
  * 
- * @author Alias
+ * @author zhuyuanbiao
  *
  * @date 2017年5月27日 下午2:42:38
  */
@@ -20,7 +20,7 @@ public class FileAlterationMonitor implements Runnable {
 
 	private final File folder;
 
-	private final ExtFilenameFilter filenameFilter;
+	private final FilePostfixNameFilter filenameFilter;
 
 	/** 文件后缀名称 */
 	private final String postfixName;
@@ -31,7 +31,7 @@ public class FileAlterationMonitor implements Runnable {
 
 	private final static Logger log = Logger.getLogger(FileAlterationMonitor.class.getName());
 
-	class ExtFilenameFilter implements FilenameFilter {
+	class FilePostfixNameFilter implements FilenameFilter {
 
 		@Override
 		public boolean accept(File folder, String name) {
@@ -42,7 +42,7 @@ public class FileAlterationMonitor implements Runnable {
 
 	public FileAlterationMonitor(String path, String postfixName) {
 		this.postfixName = postfixName;
-		this.filenameFilter = new ExtFilenameFilter();
+		this.filenameFilter = new FilePostfixNameFilter();
 		this.fileMap = new HashMap<>();
 		this.listeners = new LinkedList<>();
 		this.folder = new File(path);
@@ -57,6 +57,9 @@ public class FileAlterationMonitor implements Runnable {
 		scanAlteration(folder);
 	}
 
+	/**
+	 * 扫描是否有文件被删除
+	 */
 	protected void scanDeletion() {
 		List<String> paths = new LinkedList<>();
 		for (String path : fileMap.keySet()) {
@@ -70,8 +73,13 @@ public class FileAlterationMonitor implements Runnable {
 		}
 	}
 
-	protected void scanAlteration(File currentFolder) {
-		for (File file : getFiles(currentFolder)) {
+	/**
+	 * 扫描是否有文件增加或修改
+	 * 
+	 * @param currentFile
+	 */
+	protected void scanAlteration(File currentFile) {
+		for (File file : getFiles(currentFile)) {
 			if (file.isDirectory()) {
 				scanAlteration(file);
 			} else {

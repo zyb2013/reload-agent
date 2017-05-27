@@ -9,8 +9,8 @@ import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.Instrumentation;
 import java.util.Enumeration;
 import java.util.EventObject;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,16 +20,21 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.yaowan.reload.monitor.ClassFileEvent;
 import com.yaowan.reload.monitor.FileAlterationListenerAdaptor;
 import com.yaowan.reload.monitor.FileAlterationMonitor;
-import com.yaowan.reload.monitor.ClassFileEvent;
 import com.yaowan.reload.monitor.JarFileEvent;
 import com.yaowan.reload.monitor.JarFileMonitor;
 
 /**
  * 加载器
  * 
- * @author Alias
+ * <pre>
+ * 用于在应用程序运行期间，修改代码后，不用重启服务器，就能生效。
+ * 只有在修改方法体里的代码才生效，其他情况都不适用。
+ * </pre>
+ * 
+ * @author zhuyuanbiao
  *
  * @date 2017年5月26日 下午5:33:15
  */
@@ -52,9 +57,7 @@ public class Reloader extends FileAlterationListenerAdaptor {
 	private final ScheduledExecutorService executor;
 
 	/** 存放已被JVM加载的类 */
-	private static Map<String, Class<?>> loadedClasses = new ConcurrentHashMap<>();
-
-	private volatile boolean loaded;
+	private static Map<String, Class<?>> loadedClasses = new HashMap<>();
 
 	public static void premain(String agentArgs, Instrumentation inst) {
 		init(agentArgs, inst);
@@ -65,7 +68,7 @@ public class Reloader extends FileAlterationListenerAdaptor {
 	}
 
 	private static void init(String agentArgs, Instrumentation inst) {
-		Args args = new Args(agentArgs);
+		StartupArgs args = new StartupArgs(agentArgs);
 		if (!args.isValid()) {
 			throw new RuntimeException("args is invalid");
 		}
@@ -77,7 +80,7 @@ public class Reloader extends FileAlterationListenerAdaptor {
 		// executor.shutdown();
 	}
 
-	public Reloader(Instrumentation inst, Args args) {
+	public Reloader(Instrumentation inst, StartupArgs args) {
 		this.instrumentation = inst;
 		this.classPath = args.getClassFolder();
 		this.jarPath = args.getJarFolder();
@@ -133,9 +136,10 @@ public class Reloader extends FileAlterationListenerAdaptor {
 	 * @param event
 	 */
 	private void reloadClass(String className, EventObject event) {
-		if (!loaded) {
-			initLoadedClasses();
-			loaded = true;
+		synchronized (this) {
+			if (loadedClasses.isEmpty()) {
+				initLoadedClasses();
+			}
 		}
 		Class<?> loadedClass = loadedClasses.get(className);
 		if (loadedClass == null) {
@@ -144,13 +148,8 @@ public class Reloader extends FileAlterationListenerAdaptor {
 		try {
 			ClassDefinition definition = new ClassDefinition(loadedClass, getByteArray(event));
 			instrumentation.redefineClasses(new ClassDefinition[] { definition });
-			if (log.isLoggable(Level.FINE)) {
-				// log.log(Level.FINE, "Reload class: " +
-				// clazz.getName());
-			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "error", e);
-			e.printStackTrace();
 		}
 	}
 

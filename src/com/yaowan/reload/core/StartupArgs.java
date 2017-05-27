@@ -8,16 +8,28 @@ import java.util.logging.Level;
 /**
  * 启动参数
  * 
- * @author Alias
+ * <pre>
+ * 在程序启动时，命令行指定参数。
+ * 例：
+ * -javaagent:${path}/reload-agent-1.0.jar="classes=${classPath}, jars=${jarPath}, interval=1000, logLevel=FINE"
+ * reload-agent-1.0.jar就是本项目的jar文件
+ * classPath：用于指定要扫描的class文件所在的目录
+ * jarPath：用于指定要扫描的jar文件所在的目录
+ * interval：扫描文件的时间间隔
+ * logLevel：日志级别，级别参照JDK的java.util.logging.Level
+ * </pre>
+ * 
+ * @author zhuyuanbiao
  *
+ * @date 2017年5月26日 下午7:42:19
  */
-public class Args {
+public class StartupArgs {
 
 	/** class文件的存放路径 */
-	private static final String CLASSES_PATH = "classes";
+	private static final String CLASSES_PATH = "classPath";
 
 	/** jar文件的存放路径 */
-	private static final String JARS_PATH = "jars";
+	private static final String JARS_PATH = "jarPath";
 
 	/** 扫描间隔时间 */
 	private static final String SCAN_INTERVAL = "interval";
@@ -25,22 +37,22 @@ public class Args {
 	/** 日志级别 */
 	private static final String LOG_LEVEL = "logLevel";
 
-	private String classFolder;
+	private String classPath;
 
-	private String jarFolder;
+	private String jarPath;
 
 	private int interval;
 
 	private Level logLevel;
 
-	private Args() {
-		this.classFolder = null;
-		this.jarFolder = null;
+	private StartupArgs() {
+		this.classPath = null;
+		this.jarPath = null;
 		this.interval = -1;
 		this.logLevel = Level.WARNING;
 	}
 
-	public Args(String agentArgs) {
+	public StartupArgs(String agentArgs) {
 		this();
 		if (agentArgs != null && agentArgs.length() > 0) {
 			if (agentArgs.indexOf("=") != -1) {
@@ -51,7 +63,7 @@ public class Args {
 		}
 	}
 
-	public Args(String classFolder, String jarFolder, int period, String logLevel) {
+	public StartupArgs(String classFolder, String jarFolder, int period, String logLevel) {
 		this();
 		setClassFolder(classFolder);
 		setJarFolder(jarFolder);
@@ -60,11 +72,11 @@ public class Args {
 	}
 
 	public String getClassFolder() {
-		return classFolder;
+		return classPath;
 	}
 
 	public String getJarFolder() {
-		return jarFolder;
+		return jarPath;
 	}
 
 	public Level getLogLevel() {
@@ -119,15 +131,15 @@ public class Args {
 	}
 
 	public boolean isValid() {
-		return classFolder != null;
+		return classPath != null;
 	}
 
 	private void setClassFolder(String classFolder) {
-		this.classFolder = parseFolderPath(classFolder);
+		this.classPath = parseFolderPath(classFolder);
 	}
 
 	private void setJarFolder(String jarFolder) {
-		this.jarFolder = parseFolderPath(jarFolder);
+		this.jarPath = parseFolderPath(jarFolder);
 	}
 
 	private void setLogLevel(String logLevel) {
@@ -149,9 +161,9 @@ public class Args {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(CLASSES_PATH).append("=").append(classFolder);
-		if (jarFolder != null) {
-			sb.append(",").append(JARS_PATH).append("=").append(jarFolder);
+		sb.append(CLASSES_PATH).append("=").append(classPath);
+		if (jarPath != null) {
+			sb.append(",").append(JARS_PATH).append("=").append(jarPath);
 		}
 		sb.append(",").append(SCAN_INTERVAL).append("=").append(interval);
 		sb.append(",").append(LOG_LEVEL).append("=").append(logLevel.toString());
